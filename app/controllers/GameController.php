@@ -15,7 +15,7 @@ class GameController extends Controller
 
     function index()
     {
-        $data = $this->model->get_data();
+        $data = $this->model->getAll();
         var_dump($data);
         $this->view->generate('game_view.php', 'template_view.php', $data);
     }

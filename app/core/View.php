@@ -15,11 +15,12 @@ class View
         }
 
 
-        include dirname(__DIR__). '/views/' . $template_view;
+        include dirname(__DIR__). '/views//' . $template_view;
     }
 
-    function generate_404()
+    function generate_404($errPage)
     {
         include dirname(__DIR__). '/views/404_view.php';
+        $page = $errPage;
     }
 }

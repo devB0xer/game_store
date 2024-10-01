@@ -6,8 +6,8 @@ use App\Core\Controller;
 
 class _404Controller extends Controller
 {
-    function index()
+    function index($page)
     {
-        $this->view->generate_404();
+        $this->view->generate_404($page);
     }
 }
