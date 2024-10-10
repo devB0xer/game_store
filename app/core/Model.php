@@ -2,55 +2,91 @@
 
 namespace App\Core;
 
-use App\Config\Database;
+use App\DB\Database;
+use ReflectionClass;
+use ReflectionProperty;
 
-class Model
+abstract class Model
 {
-    protected $conn;
+    protected $db;
+    protected $tableName = null;
 
-    public $table_name;
-
-    protected $columns; 
-
-    public function __construct(Database $db = new Database) {
-        $this->conn = $db->getConnection();
-    }
-
-    public function setСolumns(array $arr){
-        $this->columns = 'someString';
-        return $this;
-    }
-
-    public function get()
+    public function __construct()
     {
-
-        $query = "SELECT " . $this->columns . " FROM " . $this->table_name;
-
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-
-        return $stmt;
+        $this->db = new Database($this->tableName);
     }
 
-    public function getAll()
+    public function loadFromDatabase(int $id): void
     {
+        $data = $this->db->find($id);
+        if ($data) {
+            $reflection = new ReflectionClass($this);
 
-        $query = "SELECT * FROM " . $this->table_name;
+            foreach ($data as $propertyName => $value) {
+                $setterName = 'set' . ucfirst($propertyName);
+                $setter = $reflection->getMethod($setterName);
 
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-
-        return $stmt;
+                if ($setter->isPublic()) {
+                    $setter->invoke($this, $value);
+                } else {
+                    echo "Ошибка: У свойства $propertyName нет публичного метода-сеттера.\n";
+                }
+            }
+        }
     }
 
-    public function getWhere(string $param){
+    public function getAll(): ?array
+    {
+        $data = $this->db->findAll();
+        if ($data) {
+            $objects = [];
+            foreach ($data as $item) {
+                $object = new static();
 
-        $query = "SELECT * FROM " . $this->table_name . "WHERE" . $param;
+                $reflection = new ReflectionClass($this);
 
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
+                foreach ($item as $propertyName => $value) {
+                    $setterName = 'set' . ucfirst($propertyName);
+                    try {
+                        $setter = $reflection->getMethod($setterName);
+                    } catch (\ReflectionException $exception) {
+                        echo $exception->getMessage();
+                        http_response_code(500);
+                        die;
+                    }
+                    
 
-        return $stmt;
+                    if ($setter->isPublic()) {
+                        $setter->invoke($object, $value);
+                    } else {
+                        echo "Ошибка: У свойства $propertyName нет публичного метода-сеттера.\n";
+                    }
+                }
 
+                $objects[] = $object->toArray();
+            }
+            return $objects;
+        }
+        return null;
     }
+
+    public function toArray(): array
+    {
+        $reflection = new ReflectionClass($this);
+        $properties = $reflection->getProperties(ReflectionProperty::IS_PRIVATE);
+
+        $array = [];
+        foreach ($properties as $property) {
+            $propertyName = $property->getName();
+            $getterName = 'get' . ucfirst($propertyName);
+            $getter = $reflection->getMethod($getterName);
+
+            if ($getter->isPublic()) {
+                $array[$propertyName] = $getter->invoke($this);
+            }
+        }
+
+        return $array;
+    }
+
 }

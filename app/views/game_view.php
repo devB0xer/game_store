@@ -2,9 +2,10 @@
 
 <?php
 
-	foreach($data as $row)
+	foreach($data_games as $game)
 	{
-		echo $row['title'] . '<br>';
+		echo $game['name'], ' ', $game['price'], '$';
+		echo '<br>';
 	}
 	
 ?>
